@@ -1,0 +1,104 @@
+---
+title: "Drought Net Data Cleaning"
+author: "Amy Henry"
+date: "2023-01-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Step 1: Install your packages
+```{r}
+install.packages("tidyverse")
+install.packages("readxl")
+install.packages("janitor")
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+```
+
+Step 2: Import your data
+```{r}
+## So far I have taught you to import data from CSV. This is not always practical - often data is in XLS or XLSX format. The readxl package helps with this. 
+
+Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx")
+# multiple sheets mean we need to specify
+
+Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1")
+# whoa loads of error messages - looking at the data, a lot is not formatted right, especially the date. 
+
+Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", skip = 1)
+# ah, that didn't help, because we'd rather have kept the first line as the column names. 
+# remove the skip. 
+
+# Instead lets perhaps skip naming columns and just have everything come in as characters. 
+Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE)
+```
+There is more than one year's worth of data however. We need to import all three and check if they're in the same format. 
+```{r}
+Spring_2020_headers <- 
+  read_excel("Spring 2021 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+
+Spring_2021_headers <- 
+  read_excel("Spring 2021 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+
+Spring_2022_headers <- 
+  read_excel("Spring 2022 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+
+names(Spring_2020_headers)
+names(Spring_2021_headers)
+names(Spring_2022_headers)
+```
+
+
+Formatting one data frame - let's check out the checklist!
+
+Which row has the best column names to keep?
+Use colnames(data) <- data[rownumber, ] to name your columns after that row. 
+```{r}
+
+# the function row_to_names() is from the janitor package
+Spring_2020_raw <- Spring_2020_raw %>% row_to_names(row_number(1))
+
+Spring_2020_raw
+```
+
+Are those column names okay, or do they need to be changed to be tidy, contain identifying information? 
+Use rename() to give your columns better names. 
+```{r}
+Spring_2020_raw <- Spring_2020_raw %>% rename(Transect = `Transect #`, Hits = `# Hits`)
+```
+
+Which rows don’t contain observations? 
+Remove them from your dataset using [ , ] or filter().  
+```{r}
+Spring_2020_raw %>% filter(Date != "Date" & Date != "mm/dd/yy")
+```
+What should the columns be? 
+- Date should be a in a date format
+- team should be character
+- block should be a factor and just say 1 instead of 1.0
+- Plot should be a factor and just say 1 instead of 1.0
+- Treatment should be a factor (and maybe will be more useful if it has the full word? exclusion etc.?)
+- Region should be a factor
+- Transect can be numeric or factor, doesn't really matter, but shouldn't have a decimal
+- Distance should be numeric
+- Code is character
+- Hits should be numeric and not have a decimal
+- Notes can stay character
+
+ 
+string it together in one tidy pipe.  
+```{r}
+Spring_2020_raw <- 
+  read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE)  %>% 
+  row_to_names(row_number(1)) %>% 
+  rename(Transect = `Transect #`, Hits = `# Hits`) %>% 
+  filter(Date != "mm/dd/yy")
+
+```
+ 
+ 
