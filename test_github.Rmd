@@ -93,5 +93,11 @@ intermediate <- Spring_data_raw%>%
 HITS <- intermediate%>%
   filter(is.na(Hits) == TRUE)
 
+
+#Change NA hits to = 1 hit when type = plant, ground = 0
+#Add column for ground cover
+
+
+view(HITS)
 ```
 
