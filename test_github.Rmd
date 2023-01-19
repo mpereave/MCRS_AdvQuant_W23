@@ -48,9 +48,9 @@ str(Spring_data_raw)
 
 ```{r}
 
-Spring_data_raw <- Spring_data_raw %>% mutate(as.factor(Block))
-Spring_data_raw <- Spring_data_raw %>% mutate(as.factor(Plot))
-Spring_data_raw <- Spring_data_raw %>% mutate(as.factor(Treatment))
+Spring_data_raw <- Spring_data_raw %>% mutate(Block = as.factor(Block))
+Spring_data_raw <- Spring_data_raw %>% mutate(Plot = as.factor(Plot))
+Spring_data_raw <- Spring_data_raw %>% mutate(Treatment = as.factor(Treatment))
 
 str(Spring_data_raw)
 ```
