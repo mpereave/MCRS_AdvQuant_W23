@@ -9,9 +9,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-#install.packages("tidyverse")
-#install.packages("readxl")
-#install.packages("janitor")
 
 library(tidyverse)
 library(readxl)
@@ -39,5 +36,10 @@ nrow(Spring_data_raw_pre)
 Spring_data_raw <- Spring_data_raw_pre %>%
   mutate(Date = as.Date(as.numeric(Date), origin = "1899-12-30"))%>%
   mutate(Distance = as.numeric(Distance))
+```
+
+```{r}
+View(Spring_data_raw)
+str(Spring_data_raw)
 ```
 
