@@ -36,10 +36,22 @@ nrow(Spring_data_raw_pre)
 Spring_data_raw <- Spring_data_raw_pre %>%
   mutate(Date = as.Date(as.numeric(Date), origin = "1899-12-30"))%>%
   mutate(Distance = as.numeric(Distance))
+
+
 ```
 
 ```{r}
 View(Spring_data_raw)
+str(Spring_data_raw)
+```
+
+
+```{r}
+
+Spring_data_raw <- Spring_data_raw %>% mutate(as.factor(Block))
+Spring_data_raw <- Spring_data_raw %>% mutate(as.factor(Plot))
+Spring_data_raw <- Spring_data_raw %>% mutate(as.factor(Treatment))
+
 str(Spring_data_raw)
 ```
 
