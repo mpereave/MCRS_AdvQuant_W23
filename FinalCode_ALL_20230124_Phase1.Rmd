@@ -70,7 +70,7 @@ DNCodes <- read_csv("DNCodes.csv")
 intermediate <- Spring_data_raw%>%
   full_join(DNCodes, by = "Code")%>%
   left_join(SpeciesKey, by = "SpeciesCode")%>%
-  mutate(LifeForm = case_when(is.na(LifeForm) == FALSE ~ LifeForm, TRUE ~ as.character(LifeForm)),
+  mutate(LifeForm = case_when(is.na(LifeForm) == FALSE ~ LifeForm, TRUE ~ as.character(Lifeform)),
          CommonName = case_when(
            SpeciesCode == "L" ~ "littter",
            SpeciesCode == "B" ~ "bare ground",
@@ -88,16 +88,69 @@ intermediate <- Spring_data_raw%>%
            
 )%>%
   select(-Code )%>%
-  fill(Transect) # will copy the value from the row above 
+  fill(Transect)%>% # will copy the value from the row above 
+  mutate(Hits = case_when(Type == "Plant" ~ 1,
+                          Type == "Ground"~ 1))%>% #Change NA hits to = 1 hit when type = plant, ground = 0/NA
+  rename(Plant_Family = `Plant Family`)
 
 HITS <- intermediate%>%
   filter(is.na(Hits) == TRUE)
 
-
-#Change NA hits to = 1 hit when type = plant, ground = 0
-#Add column for ground cover
-
+#Add column for ground cover?
 
 view(HITS)
+
+#testing for unique values for each column
+unique(intermediate$Treatment)
+unique(intermediate$Plot)
+unique(intermediate$Block)
+unique(intermediate$Region)
+unique(intermediate$Transect)
+unique(intermediate$Volunteer) ## maybe need to change volunteer to "Y" and NA to "N" ?
+unique(intermediate$Distance) ## not sure if having 52.0 is normal
+unique(intermediate
+       $`other/old scientific names`)
+unique(intermediate$SciName)
+unique(intermediate$CommonName) ## number of total SciName and CommonName are not matching: Avena fatua and Avena barbata are both wild oat. Maybe need to differentiate in the common name?
+SciCommon <- intermediate%>%
+  filter(SciName == "Avena barbata")
+
+#figure the number of rows of ground and NAs Type, will be used to see if all the NAs in status, native status, and Plant_Family matches (Asumming all Plant Type data will not have these columns missing)
+test <- intermediate %>%
+  filter(Type == "Ground" | is.na(Type) == TRUE)
+nrow(test)
+
+
+unique(intermediate$Status)
+Status <- intermediate%>%
+  filter(is.na(Status) == TRUE)
+nrow(Status)
+
+unique(intermediate$NativeStatus)
+Native <- intermediate%>%
+  filter(is.na(NativeStatus) == TRUE)
+nrow(Status)
+
+unique(intermediate$Plant_Family)
+PlantFamily <- intermediate%>%
+  filter(is.na(Plant_Family) == TRUE)
+nrow(Status)
+
+#numbers of rows of plant family and Status do not match, filter the value out to see what plant species is missing information
+unique(intermediate$NativeStatus)
+Native <- intermediate%>%
+  filter(is.na(NativeStatus) == TRUE & Type != "Ground" & is.na(Type) == FALSE) 
+unique(Native$SpeciesCode)
+unique(intermediate$Plant_Family)
+PlantFamily <- intermediate%>%
+  filter(is.na(Plant_Family) == TRUE & Type != "Ground" & is.na(Type) == FALSE)
+unique(PlantFamily$SpeciesCode)
+#AVESPP = non-native, BROSPP, SILSPP can be native or non-native, FESMYE = FESMYU, EROSPP = non-native, CONBON, PHAMIN =  not found in the full species list, need to check the species
+
+```
+## export to .csv and Rdata
+```{r}
+write_csv(intermediate, "Dataset_PRIMARY_20230124.csv")
+saveRDS(intermediate, file = "Dataset_PRIMARY_20230124.Rdata")
 ```
 
