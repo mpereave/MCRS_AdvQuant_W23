@@ -152,5 +152,50 @@ unique(PlantFamily$SpeciesCode)
 ```{r}
 write_csv(intermediate, "Dataset_PRIMARY_20230124.csv")
 saveRDS(intermediate, file = "Dataset_PRIMARY_20230124.Rdata")
+
+#Amy's code to save and turn in
+#save(DNTransect_Primary, file = " ")
+```
+
+
+##Importing data directly from google drive. Noreen will upload full code once Amy releases it to us
+```{r}
+library (googlesheets4)
+
+dat2020 <- read_sheet
+
+```
+
+## Next steps for class. Amy will release full code file soon.
+```{r}
+# One student for each calculation
+
+Parameters to calculate x Treatment x Seed Source
+Species richness
+total 
+Native
+Non-native
+Lifeform
+Native
+
+
+Shannon Diversity
+Total
+Native
+non -native
+Lifeform
+Native
+Non-native
+Percent cover
+
+
+Focal species (ENCCAL, ERIFAS, ARTCAL, SALMEL)
+Total
+Native
+non -native
+Lifeform
+Native
+Non-native
+
 ```
 
