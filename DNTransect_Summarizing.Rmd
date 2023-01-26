@@ -8,10 +8,17 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(vegan)
+library(lubridate)
 
 load(file = "DNTransect_Primary.Rdata")
 ```
 
+Steps:
+1. Create an Index column for all transects
+2. Create one column per species using pivot_wider()
+3. Separate the Metadata colu,ns from the species data columns, keeping Index in common
+4. make the species data columnds a matrix to use functions from the `vegan` package
+5. Merge index information baack to your calculated matrix
 
 ## Species Richness
 Calculate species richness for each TRANSECT for each Treatment and Seed Source combination
@@ -23,6 +30,47 @@ Calculate species richness for each TRANSECT for each Treatment and Seed Source 
 ---Native
 ---Non-native
 ```{r}
+#Creating your index
+DN_index <- DNTransect_Primary %>% 
+  mutate(Index = paste(year(Date),Block,Plot,Transect, sep = "-"))
+
+DN_Hits_Matrix <- DN_index %>% 
+  filter(Type =="Plant") %>%
+  select(Index, SpeciesCode, Hits) %>% 
+  group_by(Index, SpeciesCode) %>%
+  summarize(Hits = sum(Hits)) %>%
+  pivot_wider(names_from = SpeciesCode, values_from = Hits) %>%
+  replace(is.na(.), 0)
+
+DN_PresABS_Matrix <- DN_index %>% 
+  filter(Type == "Plant") %>%
+  select(Index, SpeciesCode, Hits) %>%
+  group_by(Index, SpeciesCode) %>%
+  summarize(Hits = sum(Hits)) %>%
+  mutate(PresAbs = case_when(
+    Hits >= 1 ~ 1,
+    Hits < 1 ~ 0
+  )) %>%
+  pivot_wider(names_from = SpeciesCode, values_from = Hits) %>%
+  replace(is.na(.), 0)
+
+DN_diversity <- DN_PresABS_Matrix %>%
+  mutate(SpRich = rowSums(across(where(is.numeric)), na.rm=TRUE))
+
+view(DN_diversity)
+
+Transect_Index <- DN_index %>% 
+  select(Date,Block:Transect, Index) %>% 
+  distinct()
+
+DN_diversity_index <- DN_diversity %>% 
+  select(Index, SpRich) %>% 
+  full_join(Transect_Index) %>%
+  select(Index, Date:Transect, SpRich)
+
+DN_diversity_index %>% ggplot() +
+  aes(x = Treatment, y = SpRich, fill = Region) +
+  geom_boxplot()
 
 ```
 
@@ -36,6 +84,21 @@ Calculate Shannon Diversity for each TRANSECT for each Treatment and Seed Source
 ---Native
 ---Non-native
 ```{r}
+Shannon <- DN_Hits_Matrix %>% 
+  ungroup() %>%
+  select(AVEFAT:SILSPP) %>% 
+  diversity(index = "shannon", MARGIN = 1 )
+
+DN_Hits_Matrix %>% 
+  select(Index) %>% 
+  bind_cols(Shannon) %>%
+  rename(H = `...2`)
+
+DN_diversity_index <- DN_diversity_index %>% full_join(Shannon2)
+
+DN_diversity_index %>% ggplot() + 
+  aes(x = Treatment, y = H, fill = Region) +
+  geom_boxplot()
 
 ```
 
