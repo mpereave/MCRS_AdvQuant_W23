@@ -1,0 +1,201 @@
+---
+title: "test_github.Rmd"
+output: html_document
+date: "2023-01-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+#Install Packages
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+```
+
+```{r}
+Spring_2020_raw_test <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE) 
+Spring_2021_raw <- read_excel("Spring 2021 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE)
+Spring_2022_raw <- read_excel("Spring 2022 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE)
+
+```
+
+
+```{r}
+Spring_data_raw_pre <- bind_rows(Spring_2020_raw, Spring_2021_raw, Spring_2022_raw)
+Spring_data_raw_pre <- Spring_data_raw_pre %>% 
+  row_to_names(row_number(1)) %>% ## change the first row to be the name of the column
+  rename(Transect = `Transect #`, Hits = `# Hits`)%>%
+  filter(Date != "Date" & Date !="mm/dd/yy")
+
+nrow(Spring_data_raw_pre)
+```
+
+
+```{r}
+Spring_data_raw <- Spring_data_raw_pre %>%
+  mutate(Date = as.Date(as.numeric(Date), origin = "1899-12-30"))%>%
+  mutate(Distance = as.numeric(Distance), 
+         Block = as.factor(Block), 
+         Plot = as.factor(Plot), 
+         Region = as.factor(Region), 
+         Treatment = as.factor(Treatment), 
+         Hits = as.numeric(Hits))%>%
+  filter(is.na(Date) == FALSE)
+
+str(Spring_data_raw)
+```
+
+
+```{r}
+Full_Species_List_Glossary_reference_only_ <- read_excel("Full Species List Glossary (reference only).xlsx")
+
+SpeciesKey <- Full_Species_List_Glossary_reference_only_%>%
+  select(1:7)%>%
+  rename(SpeciesCode =`Species Code (A-Z)`, NativeStatus = `Native/Non-Native`, CommonName = `Common Name`, SciName = `Full Scientific Name (Genus species)`)
+
+unique(Spring_data_raw$Code)%>% write.csv(file = "DNCodes_raw.csv")
+DNCodes <- read_csv("DNCodes.csv")
+
+
+```
+
+
+```{r}
+intermediate <- Spring_data_raw%>%
+  full_join(DNCodes, by = "Code")%>%
+  left_join(SpeciesKey, by = "SpeciesCode")%>%
+  mutate(LifeForm = case_when(is.na(LifeForm) == FALSE ~ LifeForm, TRUE ~ as.character(Lifeform)),
+         CommonName = case_when(
+           SpeciesCode == "L" ~ "littter",
+           SpeciesCode == "B" ~ "bare ground",
+           SpeciesCode == "W" ~ "coarse woody debris",
+           SpeciesCode == "F" ~ "fine debris",
+           SpeciesCode == "R" ~ "rock",
+           SpeciesCode == "S" ~ "stem",
+           SpeciesCode == "T" ~ "thatch",
+           TRUE ~ as.character(CommonName)
+         ),
+         SciName = case_when(
+           Type == "Ground" ~ CommonName,
+           TRUE ~ as.character(SciName)
+         )
+           
+)%>%
+  select(-Code )%>%
+  fill(Transect)%>% # will copy the value from the row above 
+  mutate(Hits = case_when(Type == "Plant" ~ 1,
+                          Type == "Ground"~ 1))%>% #Change NA hits to = 1 hit when type = plant, ground = 0/NA
+  rename(Plant_Family = `Plant Family`)
+
+HITS <- intermediate%>%
+  filter(is.na(Hits) == TRUE)
+
+#Add column for ground cover?
+
+view(HITS)
+
+#testing for unique values for each column
+unique(intermediate$Treatment)
+unique(intermediate$Plot)
+unique(intermediate$Block)
+unique(intermediate$Region)
+unique(intermediate$Transect)
+unique(intermediate$Volunteer) ## maybe need to change volunteer to "Y" and NA to "N" ?
+unique(intermediate$Distance) ## not sure if having 52.0 is normal
+unique(intermediate
+       $`other/old scientific names`)
+unique(intermediate$SciName)
+unique(intermediate$CommonName) ## number of total SciName and CommonName are not matching: Avena fatua and Avena barbata are both wild oat. Maybe need to differentiate in the common name?
+SciCommon <- intermediate%>%
+  filter(SciName == "Avena barbata")
+
+#figure the number of rows of ground and NAs Type, will be used to see if all the NAs in status, native status, and Plant_Family matches (Asumming all Plant Type data will not have these columns missing)
+test <- intermediate %>%
+  filter(Type == "Ground" | is.na(Type) == TRUE)
+nrow(test)
+
+
+unique(intermediate$Status)
+Status <- intermediate%>%
+  filter(is.na(Status) == TRUE)
+nrow(Status)
+
+unique(intermediate$NativeStatus)
+Native <- intermediate%>%
+  filter(is.na(NativeStatus) == TRUE)
+nrow(Status)
+
+unique(intermediate$Plant_Family)
+PlantFamily <- intermediate%>%
+  filter(is.na(Plant_Family) == TRUE)
+nrow(Status)
+
+#numbers of rows of plant family and Status do not match, filter the value out to see what plant species is missing information
+unique(intermediate$NativeStatus)
+Native <- intermediate%>%
+  filter(is.na(NativeStatus) == TRUE & Type != "Ground" & is.na(Type) == FALSE) 
+unique(Native$SpeciesCode)
+unique(intermediate$Plant_Family)
+PlantFamily <- intermediate%>%
+  filter(is.na(Plant_Family) == TRUE & Type != "Ground" & is.na(Type) == FALSE)
+unique(PlantFamily$SpeciesCode)
+#AVESPP = non-native, BROSPP, SILSPP can be native or non-native, FESMYE = FESMYU, EROSPP = non-native, CONBON, PHAMIN =  not found in the full species list, need to check the species
+
+```
+## export to .csv and Rdata
+```{r}
+write_csv(intermediate, "Dataset_PRIMARY_20230124.csv")
+saveRDS(intermediate, file = "Dataset_PRIMARY_20230124.Rdata")
+
+#Amy's code to save and turn in
+#save(DNTransect_Primary, file = " ")
+```
+
+
+##Importing data directly from google drive. Noreen will upload full code once Amy releases it to us
+```{r}
+library (googlesheets4)
+
+dat2020 <- read_sheet
+
+```
+
+## Next steps for class. Amy will release full code file soon.
+```{r}
+# One student for each calculation
+
+Parameters to calculate x Treatment x Seed Source
+Species richness
+total 
+Native
+Non-native
+Lifeform
+Native
+
+
+Shannon Diversity
+Total
+Native
+non -native
+Lifeform
+Native
+Non-native
+Percent cover
+
+
+Focal species (ENCCAL, ERIFAS, ARTCAL, SALMEL)
+Total
+Native
+non -native
+Lifeform
+Native
+Non-native
+
+```
+

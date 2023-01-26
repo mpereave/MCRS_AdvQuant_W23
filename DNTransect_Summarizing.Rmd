@@ -1,0 +1,72 @@
+---
+title: "DNTransect_Summarizing"
+author: "Amy Henry"
+date: "2023-01-24"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(vegan)
+
+load(file = "DNTransect_Primary.Rdata")
+```
+
+
+## Species Richness
+Calculate species richness for each TRANSECT for each Treatment and Seed Source combination
+
+-- Total
+-- Native
+-- Non-native
+-- LifeForm
+---Native
+---Non-native
+```{r}
+
+```
+
+## Shannon Diversity
+Calculate Shannon Diversity for each TRANSECT for each Treatment and Seed Source combination
+
+-- Total
+-- Native
+-- Non-native
+-- LifeForm
+---Native
+---Non-native
+```{r}
+
+```
+
+
+## Calculate Percent Cover with PRESENCE/ABSENCE
+Convert Hits column to 0/1 (i.e., presence/absence), then sum for percent cover for each TRANSECT for each Treatment and Seed Source combination
+
+-- For each Focal Species (ENCCAL, ERIFAS, ARTCAL, SALMEL)
+-- Total
+-- Native
+-- Non-native
+-- LifeForm
+---Native
+---Non-native
+```{r}
+
+```
+
+## Calculate Rough Abundance with COUNTS OF HITS
+Sum the count of hits for each TRANSECT for each Treatment and Seed Source combination
+
+-- For each Focal Species (ENCCAL, ERIFAS, ARTCAL, SALMEL)
+-- Total
+-- Native
+-- Non-native
+-- LifeForm
+---Native
+---Non-native
+```{r}
+
+```
+
+
+
