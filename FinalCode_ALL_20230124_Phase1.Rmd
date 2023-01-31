@@ -15,6 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readxl)
 library(janitor)
+library(vegan)
+library(lubridate)
 ```
 
 ```{r}
@@ -146,7 +148,6 @@ PlantFamily <- intermediate%>%
   filter(is.na(Plant_Family) == TRUE & Type != "Ground" & is.na(Type) == FALSE)
 unique(PlantFamily$SpeciesCode)
 #AVESPP = non-native, BROSPP, SILSPP can be native or non-native, FESMYE = FESMYU, EROSPP = non-native, CONBON, PHAMIN =  not found in the full species list, need to check the species
-
 ```
 ## export to .csv and Rdata
 ```{r}
@@ -167,10 +168,9 @@ dat2020 <- read_sheet
 ```
 
 ## Next steps for class. Amy will release full code file soon.
-```{r}
 # One student for each calculation
 
-Parameters to calculate x Treatment x Seed Source
+#Parameters to calculate x Treatment x Seed Source
 Species richness
 total 
 Native
@@ -179,7 +179,7 @@ Lifeform
 Native
 
 
-Shannon Diversity
+#Shannon Diversity
 Total
 Native
 non -native
@@ -189,7 +189,7 @@ Non-native
 Percent cover
 
 
-Focal species (ENCCAL, ERIFAS, ARTCAL, SALMEL)
+#Focal species (ENCCAL, ERIFAS, ARTCAL, SALMEL)
 Total
 Native
 non -native
@@ -197,5 +197,45 @@ Lifeform
 Native
 Non-native
 
+
+##percent cover
+point/total points
+
+## Cover dominace
+hits/total points (hits per point)
+
+```{r}
+DNTransect_Primary <- load(file = "DNTransect_Primary.Rdata")
+
+DN_index <- DNTransect_Primary %>% 
+  mutate(Index = paste(year(Date),Block,Plot,Transect, sep = "-"))
+
+SpeciesPerCover <- DN_index %>%
+  filter(Type == "Plant")%>%
+  select(Index, SpeciesCode, Hits)%>%
+  mutate(PresAbs = case_when(
+    Hits >= 1 ~ 1,
+    Hits < 1 ~ 0
+    )) %>%
+  group_by(Index, SpeciesCode)%>%
+  summarise(PresAbsSum = sum(PresAbs))%>%
+  mutate(PerCover = PresAbsSum/9) %>%
+  pivot_wider(names_from = SpeciesCode, values_from = PerCover)%>%
+  replace(is.na(.), 0)
+  
 ```
+
+```{r}
+SpeciesPerCover %>%
+  pivot_longer(3:ncol(SpeciesPerCover), names_to = "SpeciesCode", values_to = "PerCover")%>%
+  left_join(SpeciesKey, by = "SpeciesCode")
+
+```
+# occupancy
+points/9
+
+# abundacne 
+hits/9
+# relative abundance 
+hits native/ hits total
 
