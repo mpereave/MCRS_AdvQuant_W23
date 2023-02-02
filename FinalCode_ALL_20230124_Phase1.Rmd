@@ -279,6 +279,15 @@ point/total points
 ## Cover dominace
 hits/total points (hits per point)
 
+# occupancy
+points/9
+# abundacne 
+hits/9
+# relative abundance 
+hits native/ hits total
+
+
+## Formatting the data for calculation and GLM (percent vover)
 ```{r}
 load(file = "DNTransect_Primary.Rdata")
 
@@ -301,16 +310,93 @@ SpeciesPerCover <- DN_index %>%
 ```
 
 ```{r}
-SpeciesPerCover %>%
+NativePerCover <- SpeciesPerCover %>%
   pivot_longer(3:ncol(SpeciesPerCover), names_to = "SpeciesCode", values_to = "PerCover")%>%
-  left_join(SpeciesKey, by = "SpeciesCode")
+  left_join(SpeciesKey, by = "SpeciesCode")%>%
+  select(-PresAbsSum)%>%
+  filter(NativeStatus == "Native")%>%
+  group_by(Index)%>%
+  summarise(NativePerCover = sum(PerCover))
 
 ```
-# occupancy
-points/9
 
-# abundacne 
-hits/9
-# relative abundance 
-hits native/ hits total
 
+```{r}
+DN_diversity_index <- DN_diversity_index%>% left_join(NativePerCover)
+
+ggplot(DN_diversity_index)+
+  aes(y = NativePerCover, x = Treatment, fill = Region)+
+  geom_boxplot()
+```
+## creating histogram to visulaise data distribution
+```{r}
+DN_diversity_index%>%
+  filter(Region != "C")%>%
+  ggplot()+
+  aes(x = NativePerCover)+
+  geom_histogram()+
+  facet_grid(Treatment~Region)
+
+
+# Three components of GLM
+# 1. random component
+# 2. systematic component
+# 3. link function
+library(lme4)
+library(lmerTest)
+
+test_1 <- DN_diversity_index %>% 
+  mutate (Year = year(Date))%>%
+  filter(Region != "C", Year == 2022)
+
+model <- lmer(NativePerCover~ Treatment * Region + (1| Block),
+             data = test_1
+             #family = "gaussian"
+             )
+
+model_noRE <- lm(NativePerCover~ Treatment * Region,  
+                 data = test_1)
+summary(model)
+
+plot(model)
+
+# To read the rsult -
+##Estimate - 
+###Treatment E and I (*) compared to ambient
+###Region X compared to Region M (*)
+
+#Akaike Information Criterion
+## smaleer values = better fit model
+
+AIC(model) # model with random effect of block
+AIC(model_noRE) # model with no block
+
+```
+
+
+STEPS:
+1. Calculate your variable
+2. Add it to the table of diversity indives (whihc includes transect info)
+3. Visualize it using box plot and/or histogram
+4. Choose your random component
+5. Compose your systematic component (your formula)
+6. Decide if you have random effects to include
+7. Choose which modeling function to use in R
+- lm for normal fixed effects only
+- glm for non-normal, fixed effects only
+- lmer for normal with random effects
+- glmer for non-normal with random effects
+8. Plot(model) to see residual plot
+9. Examine fixed effects estimates in summary(model)
+10. Compare fit of model to other possible modeling using AIC()
+
+
+#For assignment 
+One for biodiversity, one for percent cover
+
+1. Total Native hits/transect - poisson
+2. Total Native hits/ Total Hits (per transect) --> proportion -  Beta/binomial
+3. PerCoverENCCAL (Pre-abs/9) - binomial
+4. 
+5. 
+6. 
