@@ -322,9 +322,9 @@ NativePerCover <- SpeciesPerCover %>%
 
 
 ```{r}
-DN_diversity_index <- DN_diversity_index%>% left_join(NativePerCover)
+DN_diversity_index_Native <- DN_diversity_index%>% left_join(NativePerCover)
 
-ggplot(DN_diversity_index)+
+ggplot(DN_diversity_index_Native)+
   aes(y = NativePerCover, x = Treatment, fill = Region)+
   geom_boxplot()
 ```
@@ -376,7 +376,7 @@ AIC(model_noRE) # model with no block
 
 STEPS:
 1. Calculate your variable
-2. Add it to the table of diversity indives (whihc includes transect info)
+2. Add it to the table of diversity indices (which includes transect info)
 3. Visualize it using box plot and/or histogram
 4. Choose your random component
 5. Compose your systematic component (your formula)
@@ -397,6 +397,19 @@ One for biodiversity, one for percent cover
 1. Total Native hits/transect - poisson
 2. Total Native hits/ Total Hits (per transect) --> proportion -  Beta/binomial
 3. PerCoverENCCAL (Pre-abs/9) - binomial
-4. 
+4. Total Non-native hits/transect - poisson
 5. 
 6. 
+
+```{r}
+NonNative_hits <- DN_index %>%
+  filter(Type == "Plant")%>%
+  select(Index, SpeciesCode, Hits)%>%
+  left_join(SpeciesKey, by = "SpeciesCode")%>%
+  filter(NativeStatus == "Non-Native")%>%
+  group_by(Index)%>%
+  summarise(Non_Native_Hits = sum(Hits))%>%
+  left_join(DN_diversity_index)
+
+```
+
