@@ -280,7 +280,7 @@ point/total points
 hits/total points (hits per point)
 
 ```{r}
-DNTransect_Primary <- load(file = "DNTransect_Primary.Rdata")
+load(file = "DNTransect_Primary.Rdata")
 
 DN_index <- DNTransect_Primary %>% 
   mutate(Index = paste(year(Date),Block,Plot,Transect, sep = "-"))
