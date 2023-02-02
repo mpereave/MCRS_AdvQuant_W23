@@ -1,4 +1,4 @@
-Date,Team,Block,Plot,Treatment,Region,Transect,Distance,Hits,Notes,SpeciesCode,Type,Status,LifeForm,Volunteer,SciName,NativeStatus,CommonName,other/old scientific names,Plant_Family
+Date,Team,Block,Plot,Treatment,Region,Transect,Distance,Hits,Notes,SpeciesCode,Type,Status,LifeForm,Volunteer,SciName,NativeStatus,CommonName,AltSciName,Plant_Family
 2020-04-29,"MP, JC",1,1,E,X,1,1,1,NA,L,Ground,NA,NA,NA,littter,NA,littter,NA,NA
 2020-04-29,"MP, JC",1,1,E,X,1,1,1,NA,BRANIG,Plant,Alive,Forb,NA,Brassica nigra,Non-Native,Black Mustard,.,Brassicaceae
 2020-04-29,"MP, JC",1,1,E,X,1,1.5,1,"IF AMOUNT NOT NOTED, # HITS = 1",L,Ground,NA,NA,NA,littter,NA,littter,NA,NA

@@ -17,5 +17,5 @@
 "16","SciName","Scientific name"
 "17","NativeStatus","Is it native or non native"
 "18","CommonName","Species common name"
-"19","other/old scientific names","Alternative common names"
+"19","AltSciName","Other or Alternative Scientific names"
 "20","Plant_Family","Plant family"

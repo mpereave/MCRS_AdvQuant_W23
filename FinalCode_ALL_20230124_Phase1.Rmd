@@ -21,7 +21,7 @@ library(dataspice)
 ```
 
 
-Part I: Data Cleaning 
+Phase I: Data Cleaning 
 
 ```{r}
 Spring_2020_raw_test <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
@@ -64,7 +64,11 @@ Full_Species_List_Glossary_reference_only_ <- read_excel("Full Species List Glos
 
 SpeciesKey <- Full_Species_List_Glossary_reference_only_%>%
   select(1:7)%>%
-  rename(SpeciesCode =`Species Code (A-Z)`, NativeStatus = `Native/Non-Native`, CommonName = `Common Name`, SciName = `Full Scientific Name (Genus species)`)
+  rename(SpeciesCode =`Species Code (A-Z)`, 
+         NativeStatus = `Native/Non-Native`, 
+         CommonName = `Common Name`, 
+         SciName = `Full Scientific Name (Genus species)`, 
+         AltSciName = `other/old scientific names`)
 
 unique(Spring_data_raw$Code)%>% write.csv(file = "DNCodes_raw.csv")
 DNCodes <- read_csv("DNCodes.csv")
@@ -115,8 +119,7 @@ unique(intermediate$Region)
 unique(intermediate$Transect)
 unique(intermediate$Volunteer) ## maybe need to change volunteer to "Y" and NA to "N" ?
 unique(intermediate$Distance) ## not sure if having 52.0 is normal
-unique(intermediate
-       $`other/old scientific names`)
+unique(intermediate$AltSciName)
 unique(intermediate$SciName)
 unique(intermediate$CommonName) ## number of total SciName and CommonName are not matching: Avena fatua and Avena barbata are both wild oat. Maybe need to differentiate in the common name?
 SciCommon <- intermediate%>%
@@ -136,12 +139,12 @@ nrow(Status)
 unique(intermediate$NativeStatus)
 Native <- intermediate%>%
   filter(is.na(NativeStatus) == TRUE)
-nrow(Status)
+nrow(Native)
 
 unique(intermediate$Plant_Family)
 PlantFamily <- intermediate%>%
   filter(is.na(Plant_Family) == TRUE)
-nrow(Status)
+nrow(PlantFamily)
 
 #numbers of rows of plant family and Status do not match, filter the value out to see what plant species is missing information
 unique(intermediate$NativeStatus)
@@ -155,15 +158,6 @@ unique(PlantFamily$SpeciesCode)
 #AVESPP = non-native, BROSPP, SILSPP can be native or non-native, FESMYE = FESMYU, EROSPP = non-native, CONBON, PHAMIN =  not found in the full species list, need to check the species
 ```
 
-
-## export to .csv and Rdata
-```{r}
-write_csv(intermediate, "Dataset_PRIMARY_20230124.csv")
-saveRDS(intermediate, file = "Dataset_PRIMARY_20230124.Rdata")
-
-#Amy's code to save and turn in
-#save(DNTransect_Primary, file = " ")
-```
 
 ## Create Metadata file (csv)
 ```{r}
@@ -196,7 +190,7 @@ Description <- c(
   'Scientific name',
   'Is it native or non native',
   'Species common name',
-  'Alternative common names',
+  'Other or Alternative Scientific names',
   'Plant family'
   )
 
@@ -228,10 +222,17 @@ read.csv(file = "Dataset_Metadata_20230201.csv")
 #write.csv(tmp, "modified_file.csv")
 ```
 
+## export data to .csv and Rdata
+```{r}
+write_csv(intermediate, "Dataset_PRIMARY_20230124.csv")
+saveRDS(intermediate, file = "Dataset_PRIMARY_20230124.Rdata")
+
+#Amy's code to save and turn in
+#save(DNTransect_Primary, file = " ")
+```
 
 
-
-Part II Analysis 
+Phase II Analysis 
 
 ##Importing data directly from google drive
 ```{r}
