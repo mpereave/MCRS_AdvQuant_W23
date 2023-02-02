@@ -20,11 +20,14 @@ library(lubridate)
 library(dataspice)
 ```
 
+
+Part I: Data Cleaning 
+
 ```{r}
 Spring_2020_raw_test <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
-Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE) 
-Spring_2021_raw <- read_excel("Spring 2021 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE)
-Spring_2022_raw <- read_excel("Spring 2022 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = FALSE)
+Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE) 
+Spring_2021_raw <- read_excel("Spring 2021 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+Spring_2022_raw <- read_excel("Spring 2022 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
 
 ```
 
@@ -32,7 +35,7 @@ Spring_2022_raw <- read_excel("Spring 2022 - Percent Cover - Raw Data DNET.xlsx"
 ```{r}
 Spring_data_raw_pre <- bind_rows(Spring_2020_raw, Spring_2021_raw, Spring_2022_raw)
 Spring_data_raw_pre <- Spring_data_raw_pre %>% 
-  row_to_names(row_number(1)) %>% ## change the first row to be the name of the column
+ ## row_to_names(row_number(1)) %>% ## change the first row to be the name of the column
   rename(Transect = `Transect #`, Hits = `# Hits`)%>%
   filter(Date != "Date" & Date !="mm/dd/yy")
 
@@ -47,7 +50,8 @@ Spring_data_raw <- Spring_data_raw_pre %>%
          Block = as.factor(Block), 
          Plot = as.factor(Plot), 
          Region = as.factor(Region), 
-         Treatment = as.factor(Treatment), 
+         Treatment = as.factor(Treatment),
+         Transect = as.factor(Transect),
          Hits = as.numeric(Hits))%>%
   filter(is.na(Date) == FALSE)
 
@@ -90,7 +94,7 @@ intermediate <- Spring_data_raw%>%
          )
            
 )%>%
-  select(-Code )%>%
+  select(-Code, -Lifeform )%>%
   fill(Transect)%>% # will copy the value from the row above 
   mutate(Hits = case_when(Type == "Plant" ~ 1,
                           Type == "Ground"~ 1))%>% #Change NA hits to = 1 hit when type = plant, ground = 0/NA
@@ -101,7 +105,7 @@ HITS <- intermediate%>%
 
 #Add column for ground cover?
 
-view(HITS)
+#view(HITS)
 
 #testing for unique values for each column
 unique(intermediate$Treatment)
@@ -119,9 +123,9 @@ SciCommon <- intermediate%>%
   filter(SciName == "Avena barbata")
 
 #figure the number of rows of ground and NAs Type, will be used to see if all the NAs in status, native status, and Plant_Family matches (Asumming all Plant Type data will not have these columns missing)
-test <- intermediate %>%
+test_na <- intermediate %>%
   filter(Type == "Ground" | is.na(Type) == TRUE)
-nrow(test)
+nrow(test_na)
 
 
 unique(intermediate$Status)
@@ -150,6 +154,8 @@ PlantFamily <- intermediate%>%
 unique(PlantFamily$SpeciesCode)
 #AVESPP = non-native, BROSPP, SILSPP can be native or non-native, FESMYE = FESMYU, EROSPP = non-native, CONBON, PHAMIN =  not found in the full species list, need to check the species
 ```
+
+
 ## export to .csv and Rdata
 ```{r}
 write_csv(intermediate, "Dataset_PRIMARY_20230124.csv")
@@ -172,23 +178,22 @@ Metadata
 
 #Write out descriptions of columns in their exact order) Note: Still need units but am unsure. Will consult Moises next class
 Description <- c(
-  'Collection day',
+  'Collection day (YYYY-MM-DD)',
   'Data collector names',
-  'Block number',
-  'Plot number',
-  'Water treatment type',
-  'Seed source',
-  'Transect number', 
-  'Collection point distance from start of transect',
+  'Block number (1-4)',
+  'Plot number (1-9)',
+  'Water treatment type (I = Irrigation, A = Ambient, E = Exclusion)',
+  'Seed source (M = Mesic, X = Xeric)',
+  'Transect number (1-5)', 
+  'Collection point distance from start of transect', ## from 0.5-5 and every .5 meter?
   'How many times a plant touches the collection pole',
   'Other notes',
-  'Species ID code',
-  'Classification of groundcover',
-  'Dead or alive', #unsure about this description
-  'Type of plant',
+  'Species ID code (6-letters)',
+  'Classification of groundcover (Plant or Ground)',
+  'Plant Status (Dead or alive)', #unsure about this description
+  'Type of plant (Shrub, Herb, Grass, Forb)',
   'Is it planted or self seeded',
   'Scientific name',
-  'Type of plant',
   'Is it native or non native',
   'Species common name',
   'Alternative common names',
@@ -208,23 +213,25 @@ view(Metadata_better)
 
 
 # Convert to csv. Make sure to change the pathway to be for your computer
-write.csv(Metadata_better, "C:\\Users\\babyr\\AdvancedQuant\\MCRS_AdvQuant_W23\\Dataset_Metadata_20230201", row.names = TRUE)
+write.csv(Metadata_better, "Dataset_Metadata_20230201.csv", row.names = TRUE)
 
 
 # Check csv file
-read.csv(file = Dataset_Metadata_20230201.csv)  
+read.csv(file = "Dataset_Metadata_20230201.csv")  
 
 
 
 
 # Example codes from the internet
-tmp <- read.csv("original_file.csv")
-tmp <- cbind(tmp, new_column)
-write.csv(tmp, "modified_file.csv")
+#tmp <- read.csv("original_file.csv")
+#tmp <- cbind(tmp, new_column)
+#write.csv(tmp, "modified_file.csv")
 ```
 
 
 
+
+Part II Analysis 
 
 ##Importing data directly from google drive
 ```{r}
