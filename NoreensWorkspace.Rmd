@@ -1,0 +1,328 @@
+---
+title: "Noreen's Workspace"
+output: html_document
+date: "2023-02-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+#Install Packages
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(vegan)
+library(lubridate)
+library(dataspice)
+```
+
+
+## Phase I: Data Cleaning 
+```{r}
+Spring_2020_raw_test <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+Spring_2020_raw <- read_excel("Spring 2020 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE) 
+Spring_2021_raw <- read_excel("Spring 2021 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+Spring_2022_raw <- read_excel("Spring 2022 - Percent Cover - Raw Data DNET.xlsx", sheet = "Sheet1", col_names = TRUE)
+
+```
+
+
+```{r}
+Spring_data_raw_pre <- bind_rows(Spring_2020_raw, Spring_2021_raw, Spring_2022_raw)
+Spring_data_raw_pre <- Spring_data_raw_pre %>% 
+ ## row_to_names(row_number(1)) %>% ## change the first row to be the name of the column
+  rename(Transect = `Transect #`, Hits = `# Hits`)%>%
+  filter(Date != "Date" & Date !="mm/dd/yy")
+
+nrow(Spring_data_raw_pre)
+```
+
+
+```{r}
+Spring_data_raw <- Spring_data_raw_pre %>%
+  mutate(Date = as.Date(as.numeric(Date), origin = "1899-12-30"))%>%
+  mutate(Distance = as.numeric(Distance), 
+         Block = as.factor(Block), 
+         Plot = as.factor(Plot), 
+         Region = as.factor(Region), 
+         Treatment = as.factor(Treatment),
+         Transect = as.factor(Transect),
+         Hits = as.numeric(Hits))%>%
+  filter(is.na(Date) == FALSE)
+
+str(Spring_data_raw)
+```
+
+
+```{r}
+Full_Species_List_Glossary_reference_only_ <- read_excel("Full Species List Glossary (reference only).xlsx")
+
+SpeciesKey <- Full_Species_List_Glossary_reference_only_%>%
+  select(1:7)%>%
+  rename(SpeciesCode =`Species Code (A-Z)`, 
+         NativeStatus = `Native/Non-Native`, 
+         CommonName = `Common Name`, 
+         SciName = `Full Scientific Name (Genus species)`, 
+         AltSciName = `other/old scientific names`)
+
+unique(Spring_data_raw$Code)%>% write.csv(file = "DNCodes_raw.csv")
+DNCodes <- read_csv("DNCodes.csv")
+
+
+```
+
+
+```{r}
+intermediate <- Spring_data_raw%>%
+  full_join(DNCodes, by = "Code")%>%
+  left_join(SpeciesKey, by = "SpeciesCode")%>%
+  mutate(LifeForm = case_when(is.na(LifeForm) == FALSE ~ LifeForm, TRUE ~ as.character(Lifeform)),
+         CommonName = case_when(
+           SpeciesCode == "L" ~ "littter",
+           SpeciesCode == "B" ~ "bare ground",
+           SpeciesCode == "W" ~ "coarse woody debris",
+           SpeciesCode == "F" ~ "fine debris",
+           SpeciesCode == "R" ~ "rock",
+           SpeciesCode == "S" ~ "stem",
+           SpeciesCode == "T" ~ "thatch",
+           TRUE ~ as.character(CommonName)
+         ),
+         SciName = case_when(
+           Type == "Ground" ~ CommonName,
+           TRUE ~ as.character(SciName)
+         )
+           
+)%>%
+  select(-Code, -Lifeform )%>%
+  fill(Transect)%>% # will copy the value from the row above 
+  mutate(Hits = case_when(Type == "Plant" ~ 1,
+                          Type == "Ground"~ 1))%>% #Change NA hits to = 1 hit when type = plant, ground = 0/NA
+  rename(Plant_Family = `Plant Family`)
+
+HITS <- intermediate%>%
+  filter(is.na(Hits) == TRUE)
+
+#Add column for ground cover?
+
+#view(HITS)
+
+#testing for unique values for each column
+unique(intermediate$Treatment)
+unique(intermediate$Plot)
+unique(intermediate$Block)
+unique(intermediate$Region)
+unique(intermediate$Transect)
+unique(intermediate$Volunteer) ## maybe need to change volunteer to "Y" and NA to "N" ?
+unique(intermediate$Distance) ## not sure if having 52.0 is normal
+unique(intermediate$AltSciName)
+unique(intermediate$SciName)
+unique(intermediate$CommonName) ## number of total SciName and CommonName are not matching: Avena fatua and Avena barbata are both wild oat. Maybe need to differentiate in the common name?
+SciCommon <- intermediate%>%
+  filter(SciName == "Avena barbata")
+
+#figure the number of rows of ground and NAs Type, will be used to see if all the NAs in status, native status, and Plant_Family matches (Asumming all Plant Type data will not have these columns missing)
+test_na <- intermediate %>%
+  filter(Type == "Ground" | is.na(Type) == TRUE)
+nrow(test_na)
+
+
+unique(intermediate$Status)
+Status <- intermediate%>%
+  filter(is.na(Status) == TRUE)
+nrow(Status)
+
+unique(intermediate$NativeStatus)
+Native <- intermediate%>%
+  filter(is.na(NativeStatus) == TRUE)
+nrow(Native)
+
+unique(intermediate$Plant_Family)
+PlantFamily <- intermediate%>%
+  filter(is.na(Plant_Family) == TRUE)
+nrow(PlantFamily)
+
+#numbers of rows of plant family and Status do not match, filter the value out to see what plant species is missing information
+unique(intermediate$NativeStatus)
+Native <- intermediate%>%
+  filter(is.na(NativeStatus) == TRUE & Type != "Ground" & is.na(Type) == FALSE) 
+unique(Native$SpeciesCode)
+unique(intermediate$Plant_Family)
+PlantFamily <- intermediate%>%
+  filter(is.na(Plant_Family) == TRUE & Type != "Ground" & is.na(Type) == FALSE)
+unique(PlantFamily$SpeciesCode)
+#AVESPP = non-native, BROSPP, SILSPP can be native or non-native, FESMYE = FESMYU, EROSPP = non-native, CONBON, PHAMIN =  not found in the full species list, need to check the species
+```
+
+
+
+
+
+##[Phase II Analysis] - I'm assigned PerCover ENCAL (Pres/Abs (0/1)/9(points)) Binomial
+
+
+
+
+
+## Next steps for class. Amy will release full code file soon.
+# One student for each calculation
+
+#Parameters to calculate x Treatment x Seed Source
+Species richness
+total 
+Native
+Non-native
+Lifeform
+Native
+
+
+#Shannon Diversity
+Total
+Native
+non -native
+Lifeform
+Native
+Non-native
+Percent cover
+
+
+#Focal species (ENCCAL, ERIFAS, ARTCAL, SALMEL)
+Total
+Native
+non -native
+Lifeform
+Native
+Non-native
+
+
+##percent cover
+point/total points
+
+## Cover dominace
+hits/total points (hits per point)
+
+# occupancy
+points/9
+# abundacne 
+hits/9
+# relative abundance 
+hits native/ hits total
+
+
+## Formatting the data for calculation and GLM (percent vover)
+```{r}
+load(file = "DNTransect_Primary.Rdata")
+
+DN_index <- DNTransect_Primary %>% 
+  mutate(Index = paste(year(Date),Block,Plot,Transect, sep = "-"))
+
+SpeciesPerCover <- DN_index %>%
+  filter(Type == "Plant")%>%
+  select(Index, SpeciesCode, Hits)%>%
+  mutate(PresAbs = case_when(
+    Hits >= 1 ~ 1,
+    Hits < 1 ~ 0
+    )) %>%
+  group_by(Index, SpeciesCode)%>%
+  summarise(PresAbsSum = sum(PresAbs))%>%
+  mutate(PerCover = PresAbsSum/9) %>%
+  pivot_wider(names_from = SpeciesCode, values_from = PerCover)%>%
+  replace(is.na(.), 0)
+  
+```
+
+```{r}
+NativePerCover <- SpeciesPerCover %>%
+  pivot_longer(3:ncol(SpeciesPerCover), names_to = "SpeciesCode", values_to = "PerCover")%>%
+  left_join(SpeciesKey, by = "SpeciesCode")%>%
+  select(-PresAbsSum)%>%
+  filter(NativeStatus == "Native")%>%
+  group_by(Index)%>%
+  summarise(NativePerCover = sum(PerCover))
+
+```
+
+
+```{r}
+DN_diversity_index <- DN_diversity_index%>% left_join(NativePerCover)
+
+ggplot(DN_diversity_index)+
+  aes(y = NativePerCover, x = Treatment, fill = Region)+
+  geom_boxplot()
+```
+## creating histogram to visulaise data distribution
+```{r}
+DN_diversity_index%>%
+  filter(Region != "C")%>%
+  ggplot()+
+  aes(x = NativePerCover)+
+  geom_histogram()+
+  facet_grid(Treatment~Region)
+
+
+# Three components of GLM
+# 1. random component
+# 2. systematic component
+# 3. link function
+library(lme4)
+library(lmerTest)
+
+test_1 <- DN_diversity_index %>% 
+  mutate (Year = year(Date))%>%
+  filter(Region != "C", Year == 2022)
+
+model <- lmer(NativePerCover~ Treatment * Region + (1| Block),
+             data = test_1
+             #family = "gaussian"
+             )
+
+model_noRE <- lm(NativePerCover~ Treatment * Region,  
+                 data = test_1)
+summary(model)
+
+plot(model)
+
+# To read the rsult -
+##Estimate - 
+###Treatment E and I (*) compared to ambient
+###Region X compared to Region M (*)
+
+#Akaike Information Criterion
+## smaleer values = better fit model
+
+AIC(model) # model with random effect of block
+AIC(model_noRE) # model with no block
+
+```
+
+
+STEPS:
+1. Calculate your variable
+2. Add it to the table of diversity indives (whihc includes transect info)
+3. Visualize it using box plot and/or histogram
+4. Choose your random component
+5. Compose your systematic component (your formula)
+6. Decide if you have random effects to include
+7. Choose which modeling function to use in R
+- lm for normal fixed effects only
+- glm for non-normal, fixed effects only
+- lmer for normal with random effects
+- glmer for non-normal with random effects
+8. Plot(model) to see residual plot
+9. Examine fixed effects estimates in summary(model)
+10. Compare fit of model to other possible modeling using AIC()
+
+
+#For assignment 
+One for biodiversity, one for percent cover
+
+1. Total Native hits/transect - poisson
+2. Total Native hits/ Total Hits (per transect) --> proportion -  Beta/binomial
+3. PerCoverENCCAL (Pre-abs/9) - binomial
+4. 
+5. 
+6. 
+
