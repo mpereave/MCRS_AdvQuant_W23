@@ -330,7 +330,7 @@ ggplot(DN_diversity_index_Native)+
 ```
 ## creating histogram to visulaise data distribution
 ```{r}
-DN_diversity_index%>%
+DN_diversity_index_Native%>%
   filter(Region != "C")%>%
   ggplot()+
   aes(x = NativePerCover)+
@@ -345,7 +345,7 @@ DN_diversity_index%>%
 library(lme4)
 library(lmerTest)
 
-test_1 <- DN_diversity_index %>% 
+test_1 <- DN_diversity_index_Native %>% 
   mutate (Year = year(Date))%>%
   filter(Region != "C", Year == 2022)
 
@@ -366,7 +366,7 @@ plot(model)
 ###Region X compared to Region M (*)
 
 #Akaike Information Criterion
-## smaleer values = better fit model
+## smaller values = better fit model
 
 AIC(model) # model with random effect of block
 AIC(model_noRE) # model with no block
@@ -401,6 +401,7 @@ One for biodiversity, one for percent cover
 5. 
 6. 
 
+# Calculating the variable and the merge it with diversity index
 ```{r}
 NonNative_hits <- DN_index %>%
   filter(Type == "Plant")%>%
@@ -411,5 +412,41 @@ NonNative_hits <- DN_index %>%
   summarise(Non_Native_Hits = sum(Hits))%>%
   left_join(DN_diversity_index)
 
+```
+
+# Create histogram
+```{r}
+ggplot(NonNative_hits)+
+  aes(y = Non_Native_Hits, x = Treatment, fill = Region)+
+  geom_boxplot()
+
+NonNative <- NonNative_hits%>%
+  filter(Region != "C")
+
+ggplot(NonNative)+
+  aes(x = Non_Native_Hits)+
+  geom_histogram()+
+  facet_grid(Treatment~Region)
+```
+
+
+```{r}
+NonNative_1 <- NonNative %>% 
+  mutate (Year = year(Date))%>%
+  filter(Region != "C", Year == 2022)
+
+model_nonnative <- lmer(Non_Native_Hits~ Treatment * Region + (1| Block),
+             data = NonNative_1
+             #family = "gaussian"
+             )
+
+model_noRE_nonnative <- lm(Non_Native_Hits~ Treatment * Region,  
+                 data = NonNative_1)
+summary(model_nonnative)
+
+plot(model_nonnative)
+
+AIC(model_nonnative) 
+AIC(model_noRE_nonnative) 
 ```
 
