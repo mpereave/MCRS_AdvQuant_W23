@@ -18,6 +18,8 @@ library(janitor)
 library(vegan)
 library(lubridate)
 library(dataspice)
+library(lme4)
+library(lmerTest)
 ```
 
 
@@ -420,33 +422,74 @@ ggplot(NonNative_hits)+
   aes(y = Non_Native_Hits, x = Treatment, fill = Region)+
   geom_boxplot()
 
-NonNative <- NonNative_hits%>%
-  filter(Region != "C")
+#NonNative <- NonNative_hits%>%
+# filter(Region != "C")
 
 ggplot(NonNative)+
   aes(x = Non_Native_Hits)+
   geom_histogram()+
   facet_grid(Treatment~Region)
+
+ggplot(NonNative)+
+  aes(x = Non_Native_Hits)+
+  geom_histogram()
 ```
 
 
 ```{r}
-NonNative_1 <- NonNative %>% 
-  mutate (Year = year(Date))%>%
-  filter(Region != "C", Year == 2022)
+NonNative_1 <- NonNative_hits %>% 
+  mutate (Year = year(Date)) %>%
+  filter(Region != "C" , Year == 2022)
 
-model_nonnative <- lmer(Non_Native_Hits~ Treatment * Region + (1| Block),
-             data = NonNative_1
-             #family = "gaussian"
+model_nonnative <- glmer(Non_Native_Hits~ Treatment * Region + ( 1 + Treatment| Block), # systematic component
+             data = NonNative_1, #specify data
+             family = "gaussian" #poisson(link = "log") #random component for poisson distributed data
              )
 
-model_noRE_nonnative <- lm(Non_Native_Hits~ Treatment * Region,  
-                 data = NonNative_1)
-summary(model_nonnative)
+model_poisson <- glmer (Non_Native_Hits~ Treatment * Region + ( 1+ Treatment | Block), 
+             data = NonNative_1,
+             family = poisson(link = "log")
+                 )
 
 plot(model_nonnative)
+plot(model_poisson)
+
+summary(model_nonnative)
+summary(model_poisson)
 
 AIC(model_nonnative) 
-AIC(model_noRE_nonnative) 
+AIC(model_poisson) 
 ```
+
+# for beta distribution
+```{r}
+ENCCAL <- DN_index %>%
+  filter(SpeciesCode == "ENCCAL")%>%
+  select(Index, SpeciesCode, Hits)%>%
+  mutate(PresAbs = case_when(
+    Hits >= 1 ~ 1,
+    Hits < 1 ~ 0))%>%
+  group_by(Index)%>%
+  summarise(ENCCALcover = sum(PresAbs)/9)%>%
+  left_join(DN_diversity_index)
+
+
+model_ENCCAL <- glm(ENCCALcover~ Treatment * Region, #+ ( 1| Block), # systematic component
+             data = ENCCAL, #specify data
+             family = "binomial" #random component for poisson distributed data
+             )
+plot(model_ENCCAL)
+summary(model_ENCCAL)
+AIC(model_ENCCAL)
+
+```
+
+Questions:
+1. Can AIC compare across models from different variables?
+2. What if the AIC is lower when I use different family group for link function?
+3. Distribution- for each treatment group? or overall the distribution of the values of that variable? (histogram all v.s. facet grid)
+
+
+
+
 
