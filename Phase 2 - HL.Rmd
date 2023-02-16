@@ -1,0 +1,218 @@
+---
+title: "Phase 2 -HL"
+author: "Helen"
+date: "2023-02-16"
+output: html_document
+---
+
+
+```{r}
+
+#Install Packages
+
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(vegan)
+library(lubridate)
+library(dataspice)
+library(lme4)
+library(lmerTest)
+```
+
+
+## Formatting the data for calculation and GLM (percent vover)
+```{r}
+load(file = "DNTransect_Primary.Rdata")
+
+DN_index <- DNTransect_Primary %>% 
+  mutate(Index = paste(year(Date),Block,Plot,Transect, sep = "-"))
+
+SpeciesPerCover <- DN_index %>%
+  filter(Type == "Plant")%>%
+  select(Index, SpeciesCode, Hits)%>%
+  mutate(PresAbs = case_when(
+    Hits >= 1 ~ 1,
+    Hits < 1 ~ 0
+    )) %>%
+  group_by(Index, SpeciesCode)%>%
+  summarise(PresAbsSum = sum(PresAbs))%>%
+  mutate(PerCover = PresAbsSum/9) %>%
+  pivot_wider(names_from = SpeciesCode, values_from = PerCover)%>%
+  replace(is.na(.), 0)
+  
+```
+
+```{r}
+NativePerCover <- SpeciesPerCover %>%
+  pivot_longer(3:ncol(SpeciesPerCover), names_to = "SpeciesCode", values_to = "PerCover")%>%
+  left_join(SpeciesKey, by = "SpeciesCode")%>%
+  select(-PresAbsSum)%>%
+  filter(NativeStatus == "Native")%>%
+  group_by(Index)%>%
+  summarise(NativePerCover = sum(PerCover))
+
+```
+
+
+```{r}
+DN_diversity_index_Native <- DN_diversity_index%>% left_join(NativePerCover)
+
+ggplot(DN_diversity_index_Native)+
+  aes(y = NativePerCover, x = Treatment, fill = Region)+
+  geom_boxplot()
+```
+
+## creating histogram to visulaise data distribution
+```{r}
+DN_diversity_index_Native%>%
+  filter(Region != "C")%>%
+  ggplot()+
+  aes(x = NativePerCover)+
+  geom_histogram()+
+  facet_grid(Treatment~Region)
+
+
+# Three components of GLM
+# 1. random component
+# 2. systematic component
+# 3. link function
+library(lme4)
+library(lmerTest)
+
+test_1 <- DN_diversity_index_Native %>% 
+  mutate (Year = year(Date))%>%
+  filter(Region != "C", Year == 2022)
+
+model <- lmer(NativePerCover~ Treatment * Region + (1| Block),
+             data = test_1
+             #family = "gaussian"
+             )
+
+model_noRE <- lm(NativePerCover~ Treatment * Region,  
+                 data = test_1)
+summary(model)
+
+plot(model)
+
+# To read the rsult -
+##Estimate - 
+###Treatment E and I (*) compared to ambient
+###Region X compared to Region M (*)
+
+#Akaike Information Criterion
+## smaller values = better fit model
+
+AIC(model) # model with random effect of block
+AIC(model_noRE) # model with no block
+
+```
+
+
+STEPS:
+1. Calculate your variable
+2. Add it to the table of diversity indices (which includes transect info)
+3. Visualize it using box plot and/or histogram
+4. Choose your random component
+5. Compose your systematic component (your formula)
+6. Decide if you have random effects to include
+7. Choose which modeling function to use in R
+- lm for normal fixed effects only
+- glm for non-normal, fixed effects only
+- lmer for normal with random effects
+- glmer for non-normal with random effects
+8. Plot(model) to see residual plot
+9. Examine fixed effects estimates in summary(model)
+10. Compare fit of model to other possible modeling using AIC()
+
+
+#For assignment 
+One for biodiversity, one for percent cover
+
+1. Total Native hits/transect - poisson
+2. Total Native hits/ Total Hits (per transect) --> proportion -  Beta/binomial
+3. PerCoverENCCAL (Pre-abs/9) - binomial
+4. Total Non-native hits/transect - poisson
+5. 
+6. 
+
+# Calculating the variable and the merge it with diversity index
+```{r}
+NonNative_hits <- DN_index %>%
+  filter(Type == "Plant")%>%
+  select(Index, SpeciesCode, Hits)%>%
+  left_join(SpeciesKey, by = "SpeciesCode")%>%
+  filter(NativeStatus == "Non-Native")%>%
+  group_by(Index)%>%
+  summarise(Non_Native_Hits = sum(Hits))%>%
+  left_join(DN_diversity_index)
+
+```
+
+# Create histogram
+```{r}
+ggplot(NonNative_hits)+
+  aes(y = Non_Native_Hits, x = Treatment, fill = Region)+
+  geom_boxplot()
+
+#NonNative <- NonNative_hits%>%
+# filter(Region != "C")
+
+ggplot(NonNative)+
+  aes(x = Non_Native_Hits)+
+  geom_histogram()+
+  facet_grid(Treatment~Region)
+
+ggplot(NonNative)+
+  aes(x = Non_Native_Hits)+
+  geom_histogram()
+```
+
+```{r}
+NonNative_1 <- NonNative_hits %>% 
+  mutate (Year = year(Date)) %>%
+  filter(Region != "C" , Year == 2022)
+
+model_nonnative <- glmer(Non_Native_Hits~ Treatment * Region + ( 1 + Treatment| Block), # systematic component
+             data = NonNative_1, #specify data
+             family = "gaussian" #poisson(link = "log") #random component for poisson distributed data
+             )
+
+model_poisson <- glmer (Non_Native_Hits~ Treatment * Region + ( 1+ Treatment | Block), 
+             data = NonNative_1,
+             family = poisson(link = "log")
+                 )
+
+plot(model_nonnative)
+plot(model_poisson)
+
+summary(model_nonnative)
+summary(model_poisson)
+
+AIC(model_nonnative) 
+AIC(model_poisson) 
+```
+
+# for beta distribution class
+```{r}
+ENCCAL <- DN_index %>%
+  filter(SpeciesCode == "ENCCAL")%>%
+  select(Index, SpeciesCode, Hits)%>%
+  mutate(PresAbs = case_when(
+    Hits >= 1 ~ 1,
+    Hits < 1 ~ 0))%>%
+  group_by(Index)%>%
+  summarise(ENCCALcover = sum(PresAbs)/9)%>%
+  left_join(DN_diversity_index)
+
+
+model_ENCCAL <- glm(ENCCALcover~ Treatment * Region, #+ ( 1| Block), # systematic component
+             data = ENCCAL, #specify data
+             family = "binomial" #random component for poisson distributed data
+             )
+plot(model_ENCCAL)
+summary(model_ENCCAL)
+AIC(model_ENCCAL)
+
+```
+

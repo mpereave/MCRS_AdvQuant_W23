@@ -461,7 +461,7 @@ AIC(model_nonnative)
 AIC(model_poisson) 
 ```
 
-# for beta distribution
+# for beta distribution class
 ```{r}
 ENCCAL <- DN_index %>%
   filter(SpeciesCode == "ENCCAL")%>%
@@ -484,10 +484,6 @@ AIC(model_ENCCAL)
 
 ```
 
-Questions:
-1. Can AIC compare across models from different variables?
-2. What if the AIC is lower when I use different family group for link function?
-3. Distribution- for each treatment group? or overall the distribution of the values of that variable? (histogram all v.s. facet grid)
 
 
 
