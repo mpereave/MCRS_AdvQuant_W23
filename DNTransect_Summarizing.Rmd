@@ -51,17 +51,18 @@ DN_PresABS_Matrix <- DN_index %>%
     Hits >= 1 ~ 1,
     Hits < 1 ~ 0
   )) %>%
-  pivot_wider(names_from = SpeciesCode, values_from = Hits) %>%
+  select(-Hits)%>%
+  pivot_wider(names_from = SpeciesCode, values_from = PresAbs) %>%
   replace(is.na(.), 0)
 
 DN_diversity <- DN_PresABS_Matrix %>%
-  mutate(SpRich = rowSums(across(where(is.numeric)), na.rm=TRUE))
+  mutate(SpRich = rowSums(across(where(is.numeric)), na.rm=TRUE ))
 
 view(DN_diversity)
 
 Transect_Index <- DN_index %>% 
   select(Date,Block:Transect, Index) %>% 
-  distinct()
+  distinct() ## eliminate duplicates of the rows
 
 DN_diversity_index <- DN_diversity %>% 
   select(Index, SpRich) %>% 
@@ -85,11 +86,11 @@ Calculate Shannon Diversity for each TRANSECT for each Treatment and Seed Source
 ---Non-native
 ```{r}
 Shannon <- DN_Hits_Matrix %>% 
-  ungroup() %>%
+  ungroup() %>% # because it was groupby index before and can't directly remove that grouping factor
   select(AVEFAT:SILSPP) %>% 
-  diversity(index = "shannon", MARGIN = 1 )
+  diversity(index = "shannon", MARGIN = 1 ) # 1 = look across the rows, 2 = look across the columns
 
-DN_Hits_Matrix %>% 
+Shannon2 <- DN_Hits_Matrix %>% 
   select(Index) %>% 
   bind_cols(Shannon) %>%
   rename(H = `...2`)
